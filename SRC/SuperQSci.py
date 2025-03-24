@@ -1,15 +1,15 @@
-import logging
 import os
+import logging
 import platform
 
 from PyQt6 import Qsci
-from PyQt6.Qsci import QsciScintilla, QsciAPIs
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.Qsci import QsciScintilla, QsciAPIs
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QKeyEvent
 
 from CONF.Constant import WORDS
-from CONF.LexerMaps import LEXER_MAPS
 from UTIL.jediLib import JdeiLib
+from CONF.LexerMaps import LEXER_MAPS
 
 
 class SuperQSci(QsciScintilla):
