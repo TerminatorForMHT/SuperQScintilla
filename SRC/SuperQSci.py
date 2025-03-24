@@ -2,12 +2,13 @@ import logging
 import os
 
 from PyQt6 import Qsci
-from PyQt6.Qsci import QsciScintilla
+from PyQt6.Qsci import QsciScintilla, QsciAPIs
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QKeyEvent
 
 from CONF.Constant import WORDS
 from CONF.LexerMaps import LEXER_MAPS
+from UTIL.jediLib import JdeiLib
 
 
 class SuperQSci(QsciScintilla):
@@ -185,6 +186,9 @@ class SuperQSci(QsciScintilla):
 
         self._configureLexer(file_path)
         self.setMargs()
+        self.setAutoCompletionSource(QsciScintilla.AutoCompletionSource.AcsAPIs)
+        self.setAutoCompletionThreshold(1)  # 输入1个字符后触发补全
+        self.textChanged.connect(self.show_completion)
 
     def _configureLexer(self, file_path):
         """
@@ -195,6 +199,7 @@ class SuperQSci(QsciScintilla):
         lexer_class = LEXER_MAPS.get(ext, Qsci.QsciLexerPython)
 
         self.lexer = lexer_class(self)
+        self.apis = QsciAPIs(self.lexer)
         font = QFont('Monaco', 11)
         self.lexer.setDefaultFont(font)
         self.lexer.setPaper(QColor('#FFFFFF'))  # 背景色（白色）
@@ -226,3 +231,25 @@ class SuperQSci(QsciScintilla):
             logging.warning(e)
         finally:
             return
+
+    def show_completion(self):
+        cursor_position = self.getCursorPosition()
+
+        # 获取 Jedi 补全建议
+        jedi_lib = JdeiLib(source=self.text(), filename=self.current_file_path)
+        completions = jedi_lib.getCompletions(line=cursor_position[0] + 1, index=cursor_position[1])
+        print(completions)
+
+        if completions:  # 确保补全列表有效
+            self.apis.clear()  # 清空之前的补全项
+            for completion in completions:
+                self.apis.add(completion)
+            self.apis.prepare()
+            self.setAutoCompletionSource(QsciScintilla.AutoCompletionSource.AcsAPIs)
+        else:
+            print("No completions available.")
+
+    def move_cursor_visible(self, line, index=0):
+        if line:
+            self.setCursorPosition(line - 1, index)
+            self.ensureLineVisible(line + self.SendScintilla(QsciScintilla.SCI_LINESONSCREEN) // 2)
