@@ -118,7 +118,7 @@ class JdeiLib:
 
         return gotoDefinition
 
-    def getReferences(self, line, index, ):
+    def getReferences(self, line, index):
         """
         获取引用参数的位置的方法。
 

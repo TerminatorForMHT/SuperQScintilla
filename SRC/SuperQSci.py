@@ -1,10 +1,10 @@
 import logging
 import os
-import platform  # 导入 platform 模块
+import platform
 
 from PyQt6 import Qsci
 from PyQt6.Qsci import QsciScintilla, QsciAPIs
-from PyQt6.QtCore import Qt, QTimer  # 导入 QTimer
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QKeyEvent
 
 from CONF.Constant import WORDS
@@ -16,6 +16,7 @@ class SuperQSci(QsciScintilla):
     """
     继承QSciScintilla, 添加IDE功能
     """
+    jump_info = pyqtSignal(dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -129,6 +130,12 @@ class SuperQSci(QsciScintilla):
                     pos = event.pos()
                     start, end = self.positionFromPoint(pos)
                     self.addUnderlineMark(start, end)
+                    cursor_position = self.getCursorPosition()
+                    jedi_lib = JdeiLib(source=self.text(), filename=self.current_file_path)
+                    assignment = jedi_lib.getAssignment(line=cursor_position[0] + 1, index=cursor_position[1])
+                    references = jedi_lib.getReferences(line=cursor_position[0] + 1, index=cursor_position[1])
+                    jump_info = dict(assignment=assignment, references=references)
+                    self.jump_info.emit(jump_info)
                 except Exception as e:
                     logging.warning(e)
             else:
