@@ -1,9 +1,10 @@
 import logging
 import os
+import platform  # 导入 platform 模块
 
 from PyQt6 import Qsci
 from PyQt6.Qsci import QsciScintilla, QsciAPIs
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer  # 导入 QTimer
 from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QKeyEvent
 
 from CONF.Constant import WORDS
@@ -173,6 +174,7 @@ class SuperQSci(QsciScintilla):
         通过文件路径加载文件内容到编辑器
         :param file_path: 要打开的完整文件路径
         """
+        print(f'正在加载文件: {file_path}')
         self.current_file_path = file_path
         try:
             if not os.path.exists(file_path):
@@ -200,8 +202,12 @@ class SuperQSci(QsciScintilla):
 
         self.lexer = lexer_class(self)
         self.apis = QsciAPIs(self.lexer)
-        font = QFont('Monaco', 11)
+
+        # 设置字体，根据操作系统区分
+        font_family = 'Monaco' if platform.system() == 'Darwin' else 'Consolas'
+        font = QFont(font_family, 11)
         self.lexer.setDefaultFont(font)
+
         self.lexer.setPaper(QColor('#FFFFFF'))  # 背景色（白色）
         self.lexer.setColor(QColor('#000000'), Qsci.QsciLexerPython.Default)  # 普通文本（黑色）
         self.lexer.setColor(QColor('#0000FF'), Qsci.QsciLexerPython.Keyword)  # 关键字（蓝色）
@@ -233,12 +239,13 @@ class SuperQSci(QsciScintilla):
             return
 
     def show_completion(self):
+        self.textChanged.disconnect(self.show_completion)
+
         cursor_position = self.getCursorPosition()
 
         # 获取 Jedi 补全建议
         jedi_lib = JdeiLib(source=self.text(), filename=self.current_file_path)
         completions = jedi_lib.getCompletions(line=cursor_position[0] + 1, index=cursor_position[1])
-        print(completions)
 
         if completions:  # 确保补全列表有效
             self.apis.clear()  # 清空之前的补全项
@@ -248,6 +255,7 @@ class SuperQSci(QsciScintilla):
             self.setAutoCompletionSource(QsciScintilla.AutoCompletionSource.AcsAPIs)
         else:
             print("No completions available.")
+        self.textChanged.connect(self.show_completion)
 
     def move_cursor_visible(self, line, index=0):
         if line:
