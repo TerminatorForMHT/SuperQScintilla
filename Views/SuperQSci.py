@@ -18,16 +18,17 @@ class SuperQSci(QsciScintilla):
     继承QSciScintilla, 添加IDE功能
     """
     jump_info = pyqtSignal(dict)
+    file_save = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.underlined_word_range = None  # 记录下划线范围
         self.current_file_path = None
         self._parent = parent
-        self.init_ui()
-        self.init_actions()
+        self.initUi()
+        self.initActions()
 
-    def init_ui(self):
+    def initUi(self):
         # 配置折叠标记样式
         self.markerDefine(QsciScintilla.MarkerSymbol.RightArrow, QsciScintilla.SC_MARKNUM_FOLDEROPEN)
         self.markerDefine(QsciScintilla.MarkerSymbol.RightArrow, QsciScintilla.SC_MARKNUM_FOLDER)
@@ -51,13 +52,13 @@ class SuperQSci(QsciScintilla):
         # 启用代码折叠
         self.setFolding(QsciScintilla.FoldStyle.PlainFoldStyle)
 
-    def init_actions(self):
+    def initActions(self):
         self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        self.save_shortcut.activated.connect(self.save_file)
+        self.save_shortcut.activated.connect(lambda: self.saveFile(self.current_file_path))
         self.format_shortcut = QShortcut(QKeySequence("Ctrl+Alt+L"), self)
-        self.format_shortcut.activated.connect(self.reformat)
+        self.format_shortcut.activated.connect(self.reFormat)
         self.comment_shortcut = QShortcut(QKeySequence("Ctrl+Alt+C"), self)
-        self.comment_shortcut.activated.connect(self.comment_selected)
+        self.comment_shortcut.activated.connect(self.commentSelected)
 
     def setMargs(self):
         # 行号相关设置
@@ -207,7 +208,7 @@ class SuperQSci(QsciScintilla):
         self.setMargs()
         self.setAutoCompletionSource(QsciScintilla.AutoCompletionSource.AcsAPIs)
         self.setAutoCompletionThreshold(1)  # 输入1个字符后触发补全
-        self.textChanged.connect(self.show_completion)
+        self.textChanged.connect(self.showCompletion)
 
     def _configureLexer(self, file_path):
         """
@@ -228,17 +229,19 @@ class SuperQSci(QsciScintilla):
         self.setLexer(self.lexer)
         self.SendScintilla(QsciScintilla.SCI_SETKEYWORDS, 1, WORDS)
 
-    def save_file(self):
+    def saveFile(self, is_shortcut=False):
         try:
             with open(self.current_file_path, 'w', encoding='utf-8') as file:
                 file.write(self.text())
+                if is_shortcut:
+                    self.file_save.emit(self.current_file_path)
         except Exception as e:
             logging.warning(e)
         finally:
             return
 
-    def show_completion(self):
-        self.textChanged.disconnect(self.show_completion)
+    def showCompletion(self):
+        self.textChanged.disconnect(self.showCompletion)
 
         cursor_position = self.getCursorPosition()
 
@@ -254,14 +257,14 @@ class SuperQSci(QsciScintilla):
             self.setAutoCompletionSource(QsciScintilla.AutoCompletionSource.AcsAPIs)
         else:
             print("No completions available.")
-        self.textChanged.connect(self.show_completion)
+        self.textChanged.connect(self.showCompletion)
 
-    def move_cursor_visible(self, line, index=0):
+    def moveCursorVisible(self, line, index=0):
         if line:
             self.setCursorPosition(line - 1, index)
             self.ensureLineVisible(line + self.SendScintilla(QsciScintilla.SCI_LINESONSCREEN) // 2)
 
-    def reformat(self):
+    def reFormat(self):
         print('format the code')
         self.setText(autopep8.fix_code(self.text()))
         # 获取文本的最后一行和最后一行的文本长度
@@ -271,7 +274,7 @@ class SuperQSci(QsciScintilla):
         # 将光标移动到最后一行的末尾
         self.setCursorPosition(last_line, last_column)
 
-    def comment_selected(self):
+    def commentSelected(self):
         """
         切换注释状态：如果行首已有注释符号，则取消注释，否则添加注释符号
         """

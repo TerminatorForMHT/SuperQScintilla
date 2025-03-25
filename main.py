@@ -1,7 +1,8 @@
 import sys
 import os
 from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog
-from SRC.SuperQSci import SuperQSci
+
+from Views.EditWidget import EditWidget
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -13,7 +14,7 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
         
         # 创建编辑器实例
-        self.editor = SuperQSci(self)
+        self.editor = EditWidget(self)
         self.setCentralWidget(self.editor)
         
         # 创建菜单栏
@@ -30,14 +31,6 @@ class MainWindow(QMainWindow):
         
         # 状态栏
         self.statusBar().showMessage('就绪')
-        
-        # 尝试加载示例文件
-        try:
-            sample_path = os.path.join(os.path.dirname(__file__), 'SRC', 'SuperQSci.py')
-            if os.path.exists(sample_path):
-                self.editor.loadFile(sample_path)
-        except Exception as e:
-            self.statusBar().showMessage(f'初始化错误: {str(e)}', 5000)
 
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, '打开文件', '', 'All Files (*)')
