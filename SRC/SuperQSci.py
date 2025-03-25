@@ -2,10 +2,11 @@ import os
 import logging
 import platform
 
+import autopep8
 from PyQt6 import Qsci
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.Qsci import QsciScintilla, QsciAPIs
-from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QKeyEvent
+from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QKeyEvent, QShortcut, QKeySequence
 
 from CONF.Constant import WORDS
 from UTIL.jediLib import JdeiLib
@@ -48,6 +49,11 @@ class SuperQSci(QsciScintilla):
 
         # 启用代码折叠
         self.setFolding(QsciScintilla.FoldStyle.PlainFoldStyle)
+
+    def init_actions(self):
+        self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.save_shortcut.activated.connect(self.save_file)
+        QShortcut(QKeySequence("Ctrl+Alt+L"), self).activated.connect(self.reformat)
 
     def setMargs(self):
         # 行号相关设置
@@ -215,24 +221,6 @@ class SuperQSci(QsciScintilla):
         font = QFont(font_family, 11)
         self.lexer.setDefaultFont(font)
 
-        self.lexer.setPaper(QColor('#FFFFFF'))  # 背景色（白色）
-        self.lexer.setColor(QColor('#000000'), Qsci.QsciLexerPython.Default)  # 普通文本（黑色）
-        self.lexer.setColor(QColor('#0000FF'), Qsci.QsciLexerPython.Keyword)  # 关键字（蓝色）
-        self.lexer.setColor(QColor('#808080'), Qsci.QsciLexerPython.Comment)  # 注释（灰色）
-        self.lexer.setColor(QColor('#098658'), Qsci.QsciLexerPython.Number)  # 数字（绿色）
-        self.lexer.setColor(QColor('#8FBC8F'), Qsci.QsciLexerPython.DoubleQuotedString)  # 双引号字符串（浅绿色）
-        self.lexer.setColor(QColor('#8FBC8F'), Qsci.QsciLexerPython.SingleQuotedString)  # 单引号字符串（浅绿色）
-        self.lexer.setColor(QColor('#8FBC8F'), Qsci.QsciLexerPython.TripleDoubleQuotedString)  # 三双引号字符串（浅绿色）
-        self.lexer.setColor(QColor('#8FBC8F'), Qsci.QsciLexerPython.TripleSingleQuotedString)  # 三双引号字符串（浅绿色）
-        self.lexer.setColor(QColor('#000000'), Qsci.QsciLexerPython.Operator)  # 操作符（黑色）
-        self.lexer.setColor(QColor('#000000'), Qsci.QsciLexerPython.Identifier)  # 变量名（黑色）
-        self.lexer.setColor(QColor('#267f99'), Qsci.QsciLexerPython.ClassName)  # 类名（深蓝色）
-        self.lexer.setColor(QColor('#267f99'), Qsci.QsciLexerPython.FunctionMethodName)  # 方法名（深蓝色）
-        self.lexer.setColor(QColor('#795E26'), Qsci.QsciLexerPython.Decorator)  # 装饰器（棕色）
-        self.lexer.setColor(QColor('#808080'), Qsci.QsciLexerPython.CommentBlock)  # 多行注释（灰色）
-        self.lexer.setColor(QColor('#E51400'), Qsci.QsciLexerPython.UnclosedString)  # 未关闭字符串（亮红色）
-        self.lexer.setColor(QColor('#267f99'), Qsci.QsciLexerPython.HighlightedIdentifier)  # 高亮变量（深蓝色）
-
         self.setLexer(self.lexer)
         self.SendScintilla(QsciScintilla.SCI_SETKEYWORDS, 1, WORDS)
 
@@ -268,3 +256,12 @@ class SuperQSci(QsciScintilla):
         if line:
             self.setCursorPosition(line - 1, index)
             self.ensureLineVisible(line + self.SendScintilla(QsciScintilla.SCI_LINESONSCREEN) // 2)
+
+    def reformat(self):
+        self.setText(autopep8.fix_code(self.text()))
+        # 获取文本的最后一行和最后一行的文本长度
+        last_line = self.lines() - 1
+        last_column = self.lineLength(last_line)
+
+        # 将光标移动到最后一行的末尾
+        self.setCursorPosition(last_line, last_column)
