@@ -25,6 +25,7 @@ class SuperQSci(QsciScintilla):
         self.current_file_path = None
         self._parent = parent
         self.init_ui()
+        self.init_actions()
 
     def init_ui(self):
         # 配置折叠标记样式
@@ -53,7 +54,10 @@ class SuperQSci(QsciScintilla):
     def init_actions(self):
         self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         self.save_shortcut.activated.connect(self.save_file)
-        QShortcut(QKeySequence("Ctrl+Alt+L"), self).activated.connect(self.reformat)
+        self.format_shortcut = QShortcut(QKeySequence("Ctrl+Alt+L"), self)
+        self.format_shortcut.activated.connect(self.reformat)
+        self.comment_shortcut = QShortcut(QKeySequence("Ctrl+Alt+C"), self)
+        self.comment_shortcut.activated.connect(self.comment_selected)
 
     def setMargs(self):
         # 行号相关设置
@@ -258,6 +262,7 @@ class SuperQSci(QsciScintilla):
             self.ensureLineVisible(line + self.SendScintilla(QsciScintilla.SCI_LINESONSCREEN) // 2)
 
     def reformat(self):
+        print('format the code')
         self.setText(autopep8.fix_code(self.text()))
         # 获取文本的最后一行和最后一行的文本长度
         last_line = self.lines() - 1
@@ -265,3 +270,18 @@ class SuperQSci(QsciScintilla):
 
         # 将光标移动到最后一行的末尾
         self.setCursorPosition(last_line, last_column)
+
+    def comment_selected(self):
+        """
+        切换注释状态：如果行首已有注释符号，则取消注释，否则添加注释符号
+        """
+        if self.selectedText():
+            lines = self.selectedText().split('\n')
+            commented = [f"# {line}" if not line.startswith("#") else line[2:] for line in lines]
+            self.replaceSelectedText('\n'.join(commented))
+        else:
+            line, _ = self.getCursorPosition()
+            ori_text = self.text(line)
+            new_text = f"# {ori_text}" if not ori_text.startswith("#") else ori_text[2:]
+            self.setSelection(line, 0, line, len(ori_text))
+            self.replaceSelectedText(new_text)
